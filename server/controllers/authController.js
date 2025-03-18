@@ -1,19 +1,19 @@
-const User = require('../models/User');
-const jwt = require('jsonwebtoken');
+import User, { findOne, findById } from '../models/User';
+import { sign } from 'jsonwebtoken';
 
 // Register a new user
-exports.register = async (req, res) => {
+export async function register(req, res) {
     try {
         const { username, email, password } = req.body;
 
         // Check if user already exists
-        let user = await User.findOne({ email });
+        let user = await findOne({ email });
         if (user) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
         // Check if username is taken
-        user = await User.findOne({ username });
+        user = await findOne({ username });
         if (user) {
             return res.status(400).json({ message: 'Username is already taken' });
         }
@@ -33,7 +33,7 @@ exports.register = async (req, res) => {
             id: user.id
         };
 
-        jwt.sign(
+        sign(
             payload,
             process.env.JWT_SECRET,
             { expiresIn: '7d' },
@@ -55,15 +55,15 @@ exports.register = async (req, res) => {
         console.error(error.message);
         res.status(500).send('Server error');
     }
-};
+}
 
 // Login user
-exports.login = async (req, res) => {
+export async function login(req, res) {
     try {
         const { email, password } = req.body;
 
         // Check if user exists
-        const user = await User.findOne({ email });
+        const user = await findOne({ email });
         if (!user) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
@@ -79,7 +79,7 @@ exports.login = async (req, res) => {
             id: user.id
         };
 
-        jwt.sign(
+        sign(
             payload,
             process.env.JWT_SECRET,
             { expiresIn: '7d' },
@@ -101,15 +101,15 @@ exports.login = async (req, res) => {
         console.error(error.message);
         res.status(500).send('Server error');
     }
-};
+}
 
 // Get current user
-exports.getCurrentUser = async (req, res) => {
+export async function getCurrentUser(req, res) {
     try {
-        const user = await User.findById(req.user.id).select('-password');
+        const user = await findById(req.user.id).select('-password');
         res.json(user);
     } catch (error) {
         console.error(error.message);
         res.status(500).send('Server error');
     }
-}; 
+} 

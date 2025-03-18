@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/user'); // Importing User model
+const User = require('../models/User'); // Importing User model
 
 router.post('/login', async (req, res) => {
     try {

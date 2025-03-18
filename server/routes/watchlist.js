@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Watchlist = require('../models/watchlist');
+// const Watchlist = require('../models/watchlist');
 const { auth } = require('../middleware/auth'); // Import the auth middleware
 
 // POST /api/watchlist - Add item to watchlist

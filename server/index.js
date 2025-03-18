@@ -4,7 +4,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 
-const user = require('./models/user');
+const user = require('./models/User'); // Changed to lowercase 'user' to match file name
 // Load environment variables
 dotenv.config();
 
@@ -17,10 +17,10 @@ const app = express();
 
 // Middleware
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000', // Allow requests from your frontend
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], // Include PATCH if needed for updates
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true, // Allow cookies or auth headers if needed
+    credentials: true,
 }));
 app.use(express.json());
 
@@ -55,10 +55,7 @@ app.use((err, req, res, next) => {
 // Connect to MongoDB
 const connectDB = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
+        await mongoose.connect(process.env.MONGO_URI); // Removed deprecated options
         console.log('MongoDB connected successfully');
     } catch (error) {
         console.error('MongoDB connection error:', {
