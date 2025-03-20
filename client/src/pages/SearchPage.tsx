@@ -204,8 +204,7 @@ const SearchPage: React.FC = () => {
 
                             <TabPanel value={tabValue} index={0}>
                                 <MovieGrid
-                                    movies={searchResults}
-                                />
+                                    movies={searchResults} mediaType={'movie'} />
                                 {searchResults.length === 0 && (
                                     <Box sx={{ textAlign: 'center', py: 4 }}>
                                         <Typography color="text.secondary">
@@ -217,8 +216,7 @@ const SearchPage: React.FC = () => {
 
                             <TabPanel value={tabValue} index={1}>
                                 <MovieGrid
-                                    movies={movieResults}
-                                />
+                                    movies={movieResults} mediaType={'movie'} />
                                 {movieResults.length === 0 && (
                                     <Box sx={{ textAlign: 'center', py: 4 }}>
                                         <Typography color="text.secondary">
@@ -230,8 +228,7 @@ const SearchPage: React.FC = () => {
 
                             <TabPanel value={tabValue} index={2}>
                                 <MovieGrid
-                                    movies={tvResults}
-                                />
+                                    movies={tvResults} mediaType={'movie'} />
                                 {tvResults.length === 0 && (
                                     <Box sx={{ textAlign: 'center', py: 4 }}>
                                         <Typography color="text.secondary">

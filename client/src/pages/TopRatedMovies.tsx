@@ -55,7 +55,7 @@ const TopRatedMoviesPage = () => {
             <Typography variant="h3" component="h1" gutterBottom align="center" sx={{ fontWeight: 'bold', mt: 4 }}>
                 Top Rated Movies
             </Typography>
-            <MovieGrid movies={movies} />
+            <MovieGrid movies={movies} mediaType={'movie'} />
         </Container>
     );
 };

@@ -4,8 +4,8 @@ export interface User {
     username: string;
     email: string;
     profilePicture?: string;
-    createdAt?: string;
-    updatedAt?: string;
+    createdAt: string;
+    updatedAt: string;
     avatar?: string;
 
 }
@@ -167,11 +167,11 @@ export interface Movie {
 // Review types
 export interface Review {
     _id: string;
-    user: User | string;
+    user: User;
     movie: string;
     rating: number;
     content: string;
-    likes: string[];
+    likes?: string[];
     createdAt: string;
     updatedAt: string;
 }
@@ -224,3 +224,4 @@ export interface RatingDistribution {
     count: number;
     percentage: number;
 }
+

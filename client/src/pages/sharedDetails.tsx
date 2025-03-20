@@ -39,6 +39,7 @@ import ExternalRatings from '../components/Movies/ExternalRatings';
 import RatingsDistribution from '../components/Movies/RatingsDistribution';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import MovieReviews from '../components/Reviews/MovieReviews';
 
 // Backend API functions
 const updateReview = async (reviewId: string, updatedReview: Review, token: string | null) => {
@@ -226,72 +227,8 @@ const DetailsPage: React.FC = () => {
 
     const validMediaType: 'movie' | 'tv' = mediaType === 'tv' ? 'tv' : 'movie';
 
-    // Function to check if the current media item is in the watchlist
-    const checkWatchlistStatus = async () => {
-        if (!isAuthenticated || !authToken || !mediaItem) {
-            console.log('Skipping watchlist check:', { isAuthenticated, authToken: !!authToken, mediaItem });
-            setWatchlistLoading(false);
-            return;
-        }
-
-        setWatchlistLoading(true);
-        try {
-            console.log('Fetching watchlist for media:', {
-                mediaId: mediaItem.id,
-                mediaType: mediaItem.media_type,
-            });
-            const response = await axios.get('/api/watchlist', {
-                headers: {
-                    Authorization: `Bearer ${authToken}`,
-                },
-            });
-            const watchlistItems = response.data.data || [];
-            console.log('Watchlist items:', watchlistItems);
-
-            const isInWatchlist = watchlistItems.some((item: any) => {
-                const watchlistMediaId = Number(item.mediaId);
-                const watchlistMediaType = item.mediaType?.toLowerCase();
-                const mediaId = Number(mediaItem.id);
-                const mediaType = mediaItem.media_type?.toLowerCase();
-
-                const match = watchlistMediaId === mediaId && watchlistMediaType === mediaType;
-                console.log('Comparing watchlist item:', {
-                    watchlistMediaId,
-                    mediaId,
-                    watchlistMediaType,
-                    mediaType,
-                    match,
-                });
-                return match;
-            });
-
-            console.log('Is in watchlist:', isInWatchlist);
-            setIsAddedToWatchlist(isInWatchlist);
-        } catch (err) {
-            if (axios.isAxiosError(err)) {
-                console.error('Axios error checking watchlist status:', {
-                    message: err.message,
-                    status: err.response?.status,
-                    data: err.response?.data,
-                    token: authToken,
-                });
-            } else {
-                console.error('Unexpected error checking watchlist status:', {
-                    message: err instanceof Error ? err.message : 'Unknown error',
-                    stack: err instanceof Error ? err.stack : undefined,
-                });
-            }
-            setIsAddedToWatchlist(false); // Default to false on error
-        } finally {
-            setWatchlistLoading(false);
-        }
-    };
-
     // Fetch watchlist status when component mounts or auth/media state changes
     useEffect(() => {
-        if (mediaItem) {
-            checkWatchlistStatus();
-        }
     }, [isAuthenticated, authToken, mediaItem]);
 
     useEffect(() => {
@@ -663,10 +600,10 @@ const DetailsPage: React.FC = () => {
                 </Box>
                 <Divider sx={{ my: 4 }} />
                 <Box sx={{ mb: 6 }}>
-                    <SectionTitle variant="h4">Ratings & Reviews</SectionTitle>
+                    <SectionTitle variant="h4">External Ratings & Reviews</SectionTitle>
                     <Grid container spacing={4}>
                         <Grid item xs={12} md={6}>
-                            <ExternalRatings ratings={externalRatings} />
+                            <ExternalRatings ratings={externalRatings} movieId={''} />
                         </Grid>
                         <Grid item xs={12} md={6}>
                             {ratingDistributionLoading ? (
@@ -680,7 +617,11 @@ const DetailsPage: React.FC = () => {
                     </Grid>
                 </Box>
                 <Divider sx={{ my: 4 }} />
-                <Box sx={{ mb: 6 }}>
+
+                {/* MovieReviews */}
+                <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.1)', zIndex: 1, position: 'relative' }} />
+                <MovieReviews movieId={id || ''} />
+                {/* <Box sx={{ mb: 6 }}>
                     <SectionTitle variant="h4">User Reviews</SectionTitle>
                     <Box sx={{ mt: 4 }}>
                         <ReviewList
@@ -691,7 +632,7 @@ const DetailsPage: React.FC = () => {
                             onReviewDeleted={handleReviewDeleted}
                         />
                     </Box>
-                </Box>
+                </Box> */}
             </Container>
 
             {/* Trailer Dialog */}

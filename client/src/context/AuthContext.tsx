@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback, useState } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { User, AuthState } from '../types';
+
+axios.defaults.baseURL = 'http://localhost:5000';
 
 // Define action types
 type AuthAction =
@@ -16,9 +18,9 @@ type AuthAction =
 const initialState: AuthState = {
     isAuthenticated: !!localStorage.getItem('token'),
     user: JSON.parse(localStorage.getItem('user') || 'null'),
-    loading: true,
+    loading: false, // Start as false, only true during actions
     error: null,
-    authToken: localStorage.getItem('token'), // Initialize authToken from localStorage
+    authToken: localStorage.getItem('token'),
 };
 
 // Create context
@@ -53,7 +55,6 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
                 isAuthenticated: true,
                 user: action.payload,
                 loading: false,
-                authToken: localStorage.getItem('token') || state.authToken, // Sync with localStorage
             };
         case 'LOGIN_SUCCESS':
         case 'REGISTER_SUCCESS':
@@ -66,10 +67,9 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
                 user: action.payload.user,
                 loading: false,
                 error: null,
-                authToken: action.payload.token, // Update authToken in state
+                authToken: action.payload.token,
             };
         case 'LOGOUT':
-        case 'AUTH_ERROR':
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             console.log('Token removed from localStorage');
@@ -78,8 +78,14 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
                 isAuthenticated: false,
                 user: null,
                 loading: false,
-                error: action.type === 'AUTH_ERROR' ? action.payload : null,
-                authToken: null, // Clear authToken in state
+                error: null,
+                authToken: null,
+            };
+        case 'AUTH_ERROR':
+            return {
+                ...state,
+                loading: false,
+                error: action.payload,
             };
         case 'LOADING':
             return {
@@ -99,82 +105,61 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
 // Provider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [state, dispatch] = useReducer(authReducer, initialState);
-    const [currentToken, setCurrentToken] = useState<string | null>(localStorage.getItem('token'));
 
     const setAuthToken = (token: string | null) => {
         if (token) {
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             console.log('Set axios default Authorization header:', `Bearer ${token}`);
-            setCurrentToken(token);
-            // Use a default User object that matches the User type if state.user is null
-            const defaultUser: User = {
-                id: '',
-                email: '',
-                username: '',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-            };
-            dispatch({ type: 'LOGIN_SUCCESS', payload: { token, user: state.user || defaultUser } }); // Sync state
         } else {
             delete axios.defaults.headers.common['Authorization'];
             console.log('Removed axios default Authorization header');
-            setCurrentToken(null);
-            dispatch({ type: 'LOGOUT' }); // Sync state on token removal
         }
     };
 
     const loadUser = useCallback(async () => {
         const token = localStorage.getItem('token');
-        const user = localStorage.getItem('user');
+        const user = JSON.parse(localStorage.getItem('user') || 'null');
         console.log('Loading user with token from localStorage:', token);
 
-        if (token && user) {
+        if (token && user && !state.isAuthenticated) {
             try {
-                setAuthToken(token); // Set the token for axios
+                setAuthToken(token);
                 const res = await axios.get('/api/auth/validate', {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                dispatch({ type: 'USER_LOADED', payload: JSON.parse(user) }); // Use stored user data
+                dispatch({ type: 'USER_LOADED', payload: user });
                 console.log('Token validated, user loaded:', res.data);
             } catch (err: any) {
                 console.error('Token validation failed:', {
                     message: err.response?.data?.message || err.message,
                     status: err.response?.status,
-                    data: err.response?.data,
                 });
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                setCurrentToken(null);
-                dispatch({ type: 'AUTH_ERROR', payload: 'Invalid or expired token. Please log in again.' });
+                // Don’t clear token here unless explicitly logging out
+                dispatch({ type: 'AUTH_ERROR', payload: 'Session expired. Please log in again.' });
             }
-        } else {
-            dispatch({ type: 'AUTH_ERROR', payload: 'No token found in localStorage. Please log in.' });
         }
-    }, []); // Empty dependency array to run only on mount
+    }, [state.isAuthenticated]);
 
     useEffect(() => {
-        loadUser();
-    }, [loadUser]); // Run loadUser when it changes (though it’s memoized)
+        if (!state.isAuthenticated) {
+            loadUser();
+        }
+    }, [loadUser, state.isAuthenticated]);
 
     const login = async (email: string, password: string) => {
         try {
             console.log('Attempting login with:', { email: email.toLowerCase(), password });
             dispatch({ type: 'LOADING' });
             const res = await axios.post('/api/auth/login', { email: email.toLowerCase(), password });
-            console.log('Login response received:', res.data); // Log full response
+            console.log('Login response:', res.data);
             if (!res.data.token || !res.data.user) {
                 throw new Error('Invalid login response: token or user missing');
             }
+            setAuthToken(res.data.token); // Set token for axios
             dispatch({ type: 'LOGIN_SUCCESS', payload: res.data });
-            setAuthToken(res.data.token); // Set the token after successful login
         } catch (err: any) {
-            const errorMessage = err.response?.data?.message || err.message || 'Login failed. Please try again.';
-            console.error('Login error details:', {
-                message: errorMessage,
-                status: err.response?.status,
-                data: err.response?.data,
-                stack: err.stack,
-            });
+            const errorMessage = err.response?.data?.message || err.message || 'Login failed';
+            console.error('Login error:', { message: errorMessage, status: err.response?.status });
             dispatch({ type: 'AUTH_ERROR', payload: errorMessage });
             throw new Error(errorMessage);
         }
@@ -182,6 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const register = async (username: string, email: string, password: string) => {
         try {
+            console.log('Attempting register with:', { username, email: email.toLowerCase(), password });
             dispatch({ type: 'LOADING' });
             const res = await axios.post('/api/auth/register', {
                 username,
@@ -189,15 +175,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 password,
             });
             console.log('Register response:', res.data);
+            if (!res.data.token || !res.data.user) {
+                throw new Error('Invalid register response: token or user missing');
+            }
+            setAuthToken(res.data.token);
             dispatch({ type: 'REGISTER_SUCCESS', payload: res.data });
-            setAuthToken(res.data.token); // Set the token after successful registration
         } catch (err: any) {
-            const errorMessage = err.response?.data?.message || 'Registration failed. Please try again.';
-            console.error('Register error:', {
-                message: errorMessage,
-                status: err.response?.status,
-                data: err.response?.data,
-            });
+            const errorMessage = err.response?.data?.message || err.message || 'Registration failed';
+            console.error('Register error:', { message: errorMessage, status: err.response?.status });
             dispatch({ type: 'AUTH_ERROR', payload: errorMessage });
             throw new Error(errorMessage);
         }
@@ -220,7 +205,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
             dispatch({ type: 'USER_LOADED', payload: res.data });
         } catch (err: any) {
-            const errorMessage = err.response?.data?.message || 'Profile update failed. Please try again.';
+            const errorMessage = err.response?.data?.message || 'Profile update failed';
             dispatch({ type: 'AUTH_ERROR', payload: errorMessage });
             throw new Error(errorMessage);
         }
@@ -230,13 +215,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         <AuthContext.Provider value={{ state, login, register, logout, clearError, updateProfile, setAuthToken }}>
             {children}
         </AuthContext.Provider>
-    );
+    )
 };
 
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (context === defaultContextValue) {
-        throw new Error('useAuth must be used within an AuthProvider. Make sure your component is wrapped with AuthProvider in the component tree.');
+        throw new Error('useAuth must be used within an AuthProvider');
     }
     return context;
 };

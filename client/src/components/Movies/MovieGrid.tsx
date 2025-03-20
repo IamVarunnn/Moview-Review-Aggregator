@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Grid,
@@ -118,7 +118,7 @@ interface MovieGridProps {
     title?: string;
     loading?: boolean;
     genreMap?: Record<number, string>;
-    mediaType?: 'movie' | 'tv'; // Ensure mediaType is optional with default
+    mediaType?: 'movie' | 'tv';
 }
 
 const MovieGrid: React.FC<MovieGridProps> = ({
@@ -126,28 +126,17 @@ const MovieGrid: React.FC<MovieGridProps> = ({
     title,
     loading = false,
     genreMap = {},
-    mediaType, // Remove default to force explicit prop
 }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [hoveredId, setHoveredId] = useState<number | null>(null);
     const navigate = useNavigate();
 
-    // Debug the received mediaType prop
-    React.useEffect(() => {
-        console.log('MovieGrid mounted with mediaType:', mediaType);
-        if (!mediaType) {
-            console.error('mediaType prop is undefined in MovieGrid!');
-        }
-    }, [mediaType]);
-
-    const handleMediaClick = (mediaId: number) => {
-        if (!mediaType) {
-            console.error('mediaType is undefined, defaulting to "tv" for safety');
-            mediaType = 'tv'; // Fallback to 'tv' if undefined
-        }
-        console.log(`Navigating to /details/${mediaType}/${mediaId} with received mediaType: ${mediaType}`);
-        navigate(`/details/${mediaType}/${mediaId}`);
+    const handleMediaClick = (mediaId: number, mediaType?: 'movie' | 'tv', hasFirstAirDate: boolean = false, hasName: boolean = false) => {
+        // Infer media type if not provided: TV shows typically have first_air_date or name
+        const inferredType = mediaType || (hasFirstAirDate || hasName ? 'tv' : 'movie');
+        console.log(`Navigating to /details/${inferredType}/${mediaId}`);
+        navigate(`/details/${inferredType}/${mediaId}`);
     };
 
     const renderSkeleton = () => {
@@ -181,18 +170,30 @@ const MovieGrid: React.FC<MovieGridProps> = ({
             const rating = (movie.vote_average || 0) / 2;
             const isHovered = hoveredId === movie.id;
 
-            // Get genre names from IDs using the genreMap, prioritizing TV-specific rendering
+            // Get genre names from IDs using the genreMap
             const genreNames = movie.genre_ids
                 ? movie.genre_ids.slice(0, 3).map((id: number) => genreMap[id] || '')
                 : [];
 
-            const displayTitle = mediaType === 'tv' ? movie.name || movie.title || 'Unknown' : movie.title || movie.name || 'Unknown';
-            const displayDate = mediaType === 'tv' ? movie.first_air_date || movie.release_date || '' : movie.release_date || movie.first_air_date || '';
+            // Use media_type to determine display properties, with fallback
+            const isTv = movie.media_type === 'tv' || (!movie.media_type && (!!movie.first_air_date || !!movie.name));
+            const displayTitle = isTv ? movie.name || movie.title || 'Unknown' : movie.title || movie.name || 'Unknown';
+            const displayDate = isTv ? movie.first_air_date || movie.release_date || '' : movie.release_date || movie.first_air_date || '';
+
+            // Log the item to debug media_type and other fields
+            console.log('MovieGrid item:', {
+                id: movie.id,
+                title: displayTitle,
+                media_type: movie.media_type,
+                first_air_date: movie.first_air_date,
+                name: movie.name,
+                title_field: movie.title,
+            });
 
             return (
-                <Grid item xs={6} sm={4} md={3} lg={3} key={movie.id}>
+                <Grid item xs={6} sm={4} md={3} lg={3} key={`${movie.media_type || 'unknown'}-${movie.id}`}>
                     <MovieCard
-                        onClick={() => handleMediaClick(movie.id)}
+                        onClick={() => handleMediaClick(movie.id, movie.media_type, !!movie.first_air_date, !!movie.name)}
                         onMouseEnter={() => setHoveredId(movie.id)}
                         onMouseLeave={() => setHoveredId(null)}
                         sx={{

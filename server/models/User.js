@@ -1,17 +1,20 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-
 const userSchema = new mongoose.Schema({
     email: {
         type: String,
         required: true,
         unique: true,
+        lowercase: true, // Ensure email is stored in lowercase
+        trim: true,
     },
     username: {
         type: String,
         required: true,
         unique: true,
+        lowercase: true, // Ensure username is stored in lowercase
+        trim: true,
     },
     password: {
         type: String,
@@ -24,6 +27,10 @@ const userSchema = new mongoose.Schema({
     updatedAt: {
         type: Date,
         default: Date.now,
+    },
+    profilePicture: {
+        type: String,
+        default: '',
     },
 });
 

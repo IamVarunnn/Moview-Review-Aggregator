@@ -204,7 +204,7 @@ const HomePage: React.FC = () => {
                 </Typography>
                 <Button
                     component={Link}
-                    to="/topratedtvshows"
+                    to="/top-rated-tv"
                     variant="outlined"
                     sx={{ fontWeight: 'bold' }}
                 >

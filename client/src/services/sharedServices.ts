@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Movie, Video, Cast, Crew, Review, Genre, ExternalRating, TVShow } from '../types';
+import { Movie, Video, Cast, Crew, Review, Genre, ExternalRating, TVShow, MediaItem } from '../types';
 import { api } from './api';
 
 const API_KEY = '849760be7112c5ccb4fb93b27df41690';
@@ -147,16 +147,27 @@ export const getUpcomingMovies = async (page: number = 1): Promise<{ results: Mo
     }
 };
 
+
+if (!API_KEY) {
+    throw new Error('TMDB API key is missing. Please set REACT_APP_TMDB_API_KEY in your .env file.');
+}
+
 export const searchMovies = async (
     query: string,
     page: number = 1
-): Promise<{ results: Movie[]; total_pages: number }> => {
+): Promise<{ results: MediaItem[]; total_pages: number }> => {
     try {
         const response = await axios.get(
-            `${API_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}&page=${page}`
+            `${API_URL}/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(query)}&page=${page}`
         );
+        console.log('Search API Response:', response.data);
+
+        const filteredResults = response.data.results.filter(
+            (item: MediaItem) => item.media_type === 'movie' || item.media_type === 'tv'
+        );
+
         return {
-            results: response.data.results,
+            results: filteredResults,
             total_pages: response.data.total_pages,
         };
     } catch (error) {
